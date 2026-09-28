@@ -1,0 +1,30 @@
+{
+  "name": "rescue-nearby",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rescue Nearby - find the nearest animal rescue NGO, vet or municipal animal control when you find an animal in distress.",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace server",
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace web",
+    "start": "npm run start --workspace server",
+    "migrate": "npm run migrate --workspace server",
+    "seed": "npm run seed --workspace server",
+    "reset": "npm run reset --workspace server",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node scripts/smoke.mjs && npm run test:dom",
+    "test:dom": "node --import ./scripts/register-jsx.mjs scripts/dom-smoke.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "jsdom": "^29.1.1"
+  }
+}

@@ -1,0 +1,96 @@
+# Rescue Nearby — single-container deployment.
+#
+# The API also serves the built SPA, so this is one process and one volume.
+# SQLite requires a persistent, writable filesystem: this does NOT work on
+# serverless platforms, and it must run as a SINGLE replica. Scaling out would
+# need Postgres + PostGIS (see the README).
+#
+#   1. cp .env.example .env
+#   2. generate a session secret:  openssl rand -hex 32
+#      -> paste into .env as SESSION_SECRET
+#   3. build the image, then use it to hash the admin password:
+#        docker build -t rescue-nearby:1.0.0 .
+#        docker run --rm rescue-nearby:1.0.0 \
+#          node server/src/scripts/makePassword.js "your strong password"
+#      -> paste the printed ADMIN_PASSWORD_SCRYPT into .env
+#   4. docker compose up -d
+#   5. first run on an empty volume, load the sample directory (optional, demo only):
+#      docker compose run --rm app npm run seed
+#
+# Step 3 uses `docker run` rather than `docker compose run` on purpose: this file
+# requires ADMIN_PASSWORD_SCRYPT to be set before Compose will start anything, so
+# using Compose to generate the hash it demands would be circular.
+#
+# The schema is created automatically on first boot, so only the directory
+# content is missing. Do NOT seed a real deployment: the numbers are placeholders.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rescue-nearby:1.0.0
+
+    # Override with RESCUE_PORT to host on a different port, e.g.
+    #   RESCUE_PORT=8080 docker compose up
+    ports:
+      - "${RESCUE_PORT:-4000}:4000"
+
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      HOST: 0.0.0.0
+
+      # Must match the volume mount below.
+      DATA_DIR: /app/data
+
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+
+      # Required. Compose fails fast with these messages rather than booting
+      # with a guessable admin password or per-boot session secret.
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required - generate with "openssl rand -hex 32"}
+      ADMIN_PASSWORD_SCRYPT: ${ADMIN_PASSWORD_SCRYPT:?ADMIN_PASSWORD_SCRYPT is required - see the build step at the top of this file}
+
+      ADMIN_SESSION_TTL_HOURS: ${ADMIN_SESSION_TTL_HOURS:-12}
+
+      # --- Live veterinary lookup (OpenStreetMap via Overpass) -------------
+      # Forwarded explicitly: Compose only passes through variables it lists, so
+      # values in .env would otherwise be ignored inside the container.
+      LIVE_LOOKUP_ENABLED: ${LIVE_LOOKUP_ENABLED:-true}
+      OVERPASS_API_URL: ${OVERPASS_API_URL:-https://overpass-api.de/api/interpreter}
+      LIVE_LOOKUP_CACHE_TTL_HOURS: ${LIVE_LOOKUP_CACHE_TTL_HOURS:-24}
+      LIVE_LOOKUP_RADIUS_KM: ${LIVE_LOOKUP_RADIUS_KM:-10}
+      LIVE_LOOKUP_TIMEOUT_MS: ${LIVE_LOOKUP_TIMEOUT_MS:-3000}
+      # OVERPASS_USER_AGENT: ${OVERPASS_USER_AGENT:-RescueNearby/1.0 (+https://your-domain.org)}
+
+      # Keep true until every organisation has been verified by phone; the UI
+      # shows "sample data" warnings based on this.
+      DIRECTORY_IS_SAMPLE_DATA: ${DIRECTORY_IS_SAMPLE_DATA:-true}
+
+      # Only needed if the SPA is hosted separately from the API.
+      # CORS_ORIGINS: https://rescue.example.org
+
+    volumes:
+      # The SQLite database and uploaded photos. This volume IS the app's
+      # memory - `docker compose down` keeps it, `down -v` destroys it.
+      - rescue-data:/app/data
+
+    restart: unless-stopped
+
+    # SQLite is a single writer with a local file lock. Do not add replicas.
+    deploy:
+      replicas: 1
+
+    # Absorbs SIGTERM so the WAL checkpoint and socket close run on shutdown
+    # rather than being killed mid-write.
+    init: true
+
+    # Logging is bounded so a long-running container cannot fill the disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  rescue-data:

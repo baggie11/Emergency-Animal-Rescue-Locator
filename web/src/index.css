@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+
+  --color-ngo: #15803d;
+  --color-ngo-bg: #dcfce7;
+  --color-vet: #b91c1c;
+  --color-vet-bg: #fee2e2;
+  --color-muni: #1d4ed8;
+  --color-muni-bg: #dbeafe;
+}
+
+/*
+  Emergency-first design rules:
+  - 16px minimum on every body control so iOS never zooms on focus.
+  - Tap targets never below 48px.
+  - Focus is always visible; this UI gets used one-handed and stressed.
+*/
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-100 text-ink-900 antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    /* Prevents the whole page rubber-banding on iOS, which is disorienting
+       when you are trying to keep a straight face at a panicking animal. */
+    overscroll-behavior-y: contain;
+  }
+
+  :where(button, a, input, select, textarea):focus-visible {
+    @apply outline-3 outline-offset-2 outline-brand-600;
+  }
+
+  /* Kill the 300ms tap delay on Android without disabling pinch-zoom. */
+  :where(button, a, [role='button']) {
+    touch-action: manipulation;
+  }
+}
+
+/*
+  The shared tap-target size. Declared with @utility (not a component class) so
+  it can be referenced by other @apply rules as well as in markup.
+  48px minimum, per the mobile-first brief.
+*/
+@utility tap {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding-inline: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+@utility field {
+  display: block;
+  width: 100%;
+  min-height: 3rem;
+  border: 2px solid var(--color-ink-200);
+  border-radius: 0.75rem;
+  background-color: #fff;
+  padding-inline: 1rem;
+  font-size: 1rem;
+  color: var(--color-ink-900);
+
+  &::placeholder {
+    color: var(--color-ink-600);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white shadow-sm ring-1 ring-ink-200;
+  }
+
+  .btn-call {
+    @apply tap bg-brand-600 text-white;
+  }
+
+  .btn-directions {
+    @apply tap bg-white text-ink-900 ring-2 ring-ink-200;
+  }
+
+  .btn-primary {
+    @apply tap bg-ink-900 text-white;
+  }
+
+  .btn-ghost {
+    @apply tap bg-ink-100 text-ink-800;
+  }
+
+  .chip {
+    @apply inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-ink-200
+      bg-white px-3.5 text-sm font-semibold whitespace-nowrap text-ink-800;
+  }
+
+  .chip-on {
+    @apply border-ink-900 bg-ink-900 text-white;
+  }
+}
+
+/* Leaflet overrides: our own pin colours, and kill the default blue focus ring. */
+.leaflet-container {
+  font: inherit;
+  background: #e2e8f0;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: #64748b;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply rounded-xl shadow-lg;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0.75rem !important;
+  font-size: 0.875rem;
+}
+
+/* Marker pins are 36x44px; the anchor sits on the tip. */
+.rescue-pin {
+  display: block;
+  width: 36px;
+  height: 44px;
+  filter: drop-shadow(0 2px 3px rgb(15 23 42 / 0.35));
+}
+
+.rescue-pin--active {
+  transform: scale(1.15);
+  transform-origin: bottom center;
+  z-index: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

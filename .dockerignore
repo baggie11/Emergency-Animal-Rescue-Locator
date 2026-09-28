@@ -1,0 +1,29 @@
+# Dependencies and build output are produced inside the image. Copying a
+# host node_modules breaks on arch mismatch (native better-sqlite3) and a
+# stale web/dist would silently ship old assets.
+node_modules
+**/node_modules
+web/dist
+dist
+
+# The database, uploaded photos and secrets must never enter an image layer.
+data
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.log
+npm-debug.log*
+
+# Not needed to run the app.
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.dockerignore
+README.md
+*.md
